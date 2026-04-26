@@ -1,0 +1,35 @@
+# Claude Code worktree internals
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.benchmarks/
+dist/
+build/
+.coverage
+htmlcov/
+
+# Virtualenv
+.venv/
+venv/
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+
+# Engine internals (gitignored except the .gitkeep marker)
+dossier/.hmlr/*
+!dossier/.hmlr/.gitkeep
+
+# Editor / OS
+.vscode/
+.idea/
+.obsidian/
+.DS_Store
+Thumbs.db

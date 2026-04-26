@@ -1,0 +1,30 @@
+# engine internals — keep directory, ignore contents
+.hmlr/*
+!.hmlr/.gitkeep
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+build/
+.coverage
+htmlcov/
+
+# env
+.env
+.env.local
+.venv/
+venv/
+
+# editors
+.vscode/
+.idea/
+.obsidian/
+
+# os
+.DS_Store
+Thumbs.db

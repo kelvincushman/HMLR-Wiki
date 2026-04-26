@@ -1,0 +1,96 @@
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dossier"
+version = "0.1.0"
+description = "HMLR + LLM Wiki fusion — a human-readable, state-aware memory lattice"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Kelvin Cushman" }]
+keywords = ["llm", "memory", "wiki", "hmlr", "agents", "rag"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+  "pydantic>=2.5",
+  "PyYAML>=6.0",
+  "click>=8.1",
+  "python-slugify>=8.0",
+]
+
+[project.optional-dependencies]
+hmlr = [
+  # real engine; optional so the stub path works for the MVP spike
+  "hmlr>=0.1.2",
+]
+embeddings = [
+  "numpy>=1.26",
+  "sentence-transformers>=2.5",
+]
+langgraph = [
+  "langgraph>=0.0.40",
+  "langchain-core>=0.1",
+  "langchain-openai>=0.1",
+]
+eval = [
+  # RAGAS evaluation + testset generation (see tests/bench/test_ragas_rag.py)
+  "ragas>=0.2",
+  "langchain>=0.2",
+  "langchain-core>=0.1",
+  "langchain-openai>=0.1",
+  "langchain-community>=0.2",
+  "datasets>=2.18",
+  "pandas>=2.0",
+]
+dev = [
+  "pytest>=7.4",
+  "pytest-asyncio>=0.23",
+  "pytest-cov>=4.1",
+  "ruff>=0.4",
+  "mypy>=1.8",
+]
+all = ["dossier[hmlr,embeddings,langgraph,eval,dev]"]
+
+[project.scripts]
+dossier = "dossier.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/kelvincushman/HMLR-Wiki"
+"HMLR upstream" = "https://github.com/Sean-V-Dev/HMLR-Agentic-AI-Memory-System"
+"Karpathy gist" = "https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dossier"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+  "bench: long-running benchmark tests (not run by default)",
+  "asyncio: async test",
+]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "SIM"]
+ignore = ["E501"]  # line length handled by formatter
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true

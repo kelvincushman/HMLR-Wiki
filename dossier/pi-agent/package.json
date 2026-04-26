@@ -1,0 +1,51 @@
+{
+  "name": "@dossier/pi",
+  "version": "0.1.0",
+  "description": "pi.dev skill for the Dossier memory lattice (HMLR + LLM Wiki fusion)",
+  "keywords": ["pi.dev", "pi-agent", "skill", "memory", "hmlr", "llm-wiki"],
+  "author": "Kelvin Cushman",
+  "license": "MIT",
+  "homepage": "https://github.com/kelvincushman/HMLR-WIKI",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kelvincushman/HMLR-WIKI.git"
+  },
+  "pi": {
+    "system": "SYSTEM.md",
+    "agentsDoc": "AGENTS.md",
+    "skills": [
+      {
+        "name": "dossier",
+        "description": "Operate the Dossier memory lattice — ingest sources into wiki/, query it with citations, run the gardener, or chat.",
+        "tools": [
+          {
+            "name": "dossier.ingest",
+            "description": "Ingest a file from raw/ into the wiki. Writes entity/concept pages, extracts facts, appends to log.md.",
+            "command": "dossier ingest ${source}",
+            "inputs": {
+              "source": { "type": "string", "description": "Path to a raw/ file" }
+            }
+          },
+          {
+            "name": "dossier.query",
+            "description": "Query the lattice. Returns candidates with citation refs and a hydrated prompt.",
+            "command": "dossier query --show-prompt ${question}",
+            "inputs": {
+              "question": { "type": "string", "description": "Natural-language question" }
+            }
+          },
+          {
+            "name": "dossier.gardener",
+            "description": "Run the consolidation + lint pass. Detects orphans, stale claims, contradictions; regenerates index.md.",
+            "command": "dossier gardener"
+          },
+          {
+            "name": "dossier.doctor",
+            "description": "Sanity-check the project layout and dependencies.",
+            "command": "dossier doctor"
+          }
+        ]
+      }
+    ]
+  }
+}
