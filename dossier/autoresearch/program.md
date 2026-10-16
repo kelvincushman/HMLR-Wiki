@@ -58,7 +58,10 @@ The composite to maximise is the mean of all four. Baselines:
    means retrieval; relevancy low means the answer model is refusing.
 3. Edit `memory.py`: either flip a toggle, or replace a component's body
    with a smarter implementation. Keep the public API stable: the harness
-   calls `ingest`, `retrieve`, `synthesize`, `build_prompt`.
+   calls `ingest`, `retrieve`, `synthesize`, `build_prompt`, and the CLI's
+   `DOSSIER_PIPELINE=llm` mode (`src/dossier/pipeline.py`) also calls
+   `consolidate`, `_get_llm`, `_text` and `_llm_extra_body` and reads
+   `LLM_MODEL` / `EMBED_MODEL`. `tests/test_pipeline.py` guards that.
 4. Update `EXPERIMENT_NOTE` at the top of `memory.py` to describe what
    you changed and what you expect.
 5. Run `python autoresearch/run_experiment.py`. The harness logs one row

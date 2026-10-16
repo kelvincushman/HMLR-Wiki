@@ -28,6 +28,8 @@ python -m dossier ingest raw/some_article.md
 python -m dossier query "what did Alice say about vegetarianism?"
 python -m dossier gardener          # consolidation + lint pass
 python -m dossier chat              # interactive dialogue (HMLR-backed)
+# DOSSIER_PIPELINE=llm (needs the [llm] extra) runs ingest/query/gardener on
+# autoresearch/memory.py via src/dossier/pipeline.py; see dossier/README.md
 
 # tests
 pytest                              # all
