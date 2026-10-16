@@ -10,7 +10,7 @@ from pathlib import Path
 
 import click
 
-from dossier import __version__
+from dossier import __version__, pipeline
 from dossier.config import DossierConfig
 from dossier.gardener import Gardener
 from dossier.hmlr_adapter import build_engine
@@ -35,6 +35,15 @@ def main(ctx: click.Context, project_root: Path | None, verbose: bool) -> None:
 @click.pass_obj
 def ingest(cfg: DossierConfig, source: Path) -> None:
     """Ingest a source file from raw/ (path can be absolute or relative)."""
+    if pipeline.enabled():
+        _check_llm_deps()
+        summary = pipeline.ingest(source, cfg)
+        click.echo("pipeline: llm")
+        click.echo(
+            f"ingested: {source.name} — {summary['entities']} entities, "
+            f"{summary['concepts']} concepts, {summary['facts']} facts"
+        )
+        return
     result = ingest_document(source, cfg=cfg)
     click.echo(f"routed: {result.route.value}")
     click.echo(f"facts: {result.facts_written}")
@@ -52,6 +61,15 @@ def ingest(cfg: DossierConfig, source: Path) -> None:
 def query_cmd(cfg: DossierConfig, question: tuple[str, ...], limit: int, show_prompt: bool) -> None:
     """Query the lattice; prints candidates and (optionally) the hydrated prompt."""
     q = " ".join(question)
+    if pipeline.enabled():
+        _check_llm_deps()
+        ans = pipeline.answer(q, cfg)
+        click.echo(ans.text or "No answer grounded in memory for this question.")
+        if ans.contexts:
+            click.echo("\nSources:")
+            for c in ans.contexts:
+                click.echo(f"  [{c['kind']}:{c['ref']}]")
+        return
     result = query_path(q, cfg=cfg, limit=limit)
     click.echo(f"question: {q}")
     click.echo(f"candidates ({len(result.candidates)}):")
@@ -65,7 +83,14 @@ def query_cmd(cfg: DossierConfig, question: tuple[str, ...], limit: int, show_pr
 @main.command()
 @click.pass_obj
 def gardener(cfg: DossierConfig) -> None:
-    """Run the gardener / lint pass."""
+    """Run the gardener / lint pass (preceded by LLM consolidation when DOSSIER_PIPELINE=llm)."""
+    if pipeline.enabled():
+        _check_llm_deps()
+        summary = pipeline.consolidate(cfg)
+        click.echo(
+            f"consolidate: {summary.get('consolidated', 0)} pages rewritten, "
+            f"{summary.get('skipped', 0)} skipped"
+        )
     report = Gardener(cfg).run()
     click.echo(f"gardener complete — {report.summary()}")
     if report.orphans:
@@ -118,6 +143,22 @@ def doctor(cfg: DossierConfig) -> None:
         click.echo("hmlr:       not installed (stub adapter active)")
     click.echo(f"use_stub:   {cfg.use_stub}")
     click.echo(f"model:      {cfg.hmlr_model}")
+    click.echo(f"pipeline:   {'llm' if pipeline.enabled() else 'heuristic'}")
+    if pipeline.enabled():
+        for key, value in pipeline.describe().items():
+            click.echo(f"  {key + ':':<16}{value}")
+        try:
+            pipeline.check_deps()
+            click.echo(f"  {'deps:':<16}ok")
+        except RuntimeError as exc:
+            click.echo(f"  {'deps:':<16}{exc}")
+
+
+def _check_llm_deps() -> None:
+    try:
+        pipeline.check_deps()
+    except RuntimeError as exc:
+        raise click.ClickException(str(exc)) from exc
 
 
 if __name__ == "__main__":

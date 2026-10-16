@@ -37,6 +37,11 @@ embeddings = [
   "numpy>=1.26",
   "sentence-transformers>=2.5",
 ]
+llm = [
+  # DOSSIER_PIPELINE=llm: LLM extraction, embedding retrieval, grounded answers
+  "openai>=1.0",
+  "langchain-openai>=0.1",
+]
 langgraph = [
   "langgraph>=0.0.40",
   "langchain-core>=0.1",
@@ -59,7 +64,7 @@ dev = [
   "ruff>=0.4",
   "mypy>=1.8",
 ]
-all = ["dossier[hmlr,embeddings,langgraph,eval,dev]"]
+all = ["dossier[hmlr,embeddings,llm,langgraph,eval,dev]"]
 
 [project.scripts]
 dossier = "dossier.cli:main"
@@ -71,6 +76,12 @@ Homepage = "https://github.com/kelvincushman/HMLR-Wiki"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/dossier"]
+
+# The LLM pipeline's source of truth is autoresearch/memory.py (the autoresearch
+# loop's file under iteration). Ship a copy inside the wheel so non-editable
+# installs can load it; see dossier.pipeline.load_memory.
+[tool.hatch.build.targets.wheel.force-include]
+"autoresearch/memory.py" = "dossier/_memory.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

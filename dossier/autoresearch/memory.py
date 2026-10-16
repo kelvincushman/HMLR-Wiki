@@ -186,7 +186,7 @@ LLM_RERANK_KEEP = 8
 RETRIEVE_WIDE_MULT = 3  # how much to overshoot RETRIEVAL_LIMIT when reranking
 
 LLM_MODEL = os.environ.get("DOSSIER_BENCH_ANSWER_MODEL", "gpt-4o-mini")
-EMBED_MODEL = "text-embedding-3-small"
+EMBED_MODEL = os.environ.get("DOSSIER_EMBED_MODEL", "text-embedding-3-small")
 
 
 # ===========================================================================
@@ -353,7 +353,7 @@ def _synthesise_page_body(page: Any, cfg: Any) -> str:
         "## Rewritten page body (obey rules 1-8)\n"
     )
     response = llm.invoke(prompt)
-    text = response.content if hasattr(response, "content") else str(response)
+    text = _text(response)
     return text.strip()
 
 
@@ -560,7 +560,7 @@ def _llm_extract_entities_concepts(chunks) -> tuple[list[dict], list[dict]]:
     text = "\n\n".join(c.text for c in chunks)[: 12000]  # cap to keep call cheap
     prompt = _ENTITY_EXTRACT_PROMPT.format(text=text)
     response = llm.invoke(prompt)
-    content = response.content if hasattr(response, "content") else str(response)
+    content = _text(response)
     data = _parse_json_block(content) or {}
     entities = data.get("entities") or []
     concepts = data.get("concepts") or []
@@ -588,7 +588,7 @@ def _llm_extract_facts(chunks) -> list[dict]:
     text = "\n\n".join(c.text for c in chunks)[:12000]
     prompt = _FACT_EXTRACT_PROMPT.format(text=text)
     response = llm.invoke(prompt)
-    content = response.content if hasattr(response, "content") else str(response)
+    content = _text(response)
     data = _parse_json_block(content) or {}
     out = []
     for f in data.get("facts") or []:
@@ -875,9 +875,9 @@ def _decompose_question(question: str) -> list[str]:
     prompt = _DECOMPOSE_PROMPT.format(n=SUBQUERY_FANOUT, question=question)
     try:
         response = llm.invoke(prompt)
-        content = response.content if hasattr(response, "content") else str(response)
+        content = _text(response)
         # tolerate code fences
-        cleaned = content.strip()
+        cleaned = content
         if cleaned.startswith("```"):
             cleaned = cleaned.split("```", 2)[1]
             if cleaned.lstrip().lower().startswith("json"):
@@ -913,7 +913,7 @@ def _llm_rerank(question: str, rows: list[dict[str, Any]], *, keep: int) -> list
         f"Top-{keep} indices:"
     )
     raw = llm.invoke(prompt)
-    text = raw.content if hasattr(raw, "content") else str(raw)
+    text = _text(raw)
     picked: list[int] = []
     for tok in text.replace("`", "").split(","):
         tok = tok.strip().split()[0] if tok.strip() else ""
@@ -1150,7 +1150,7 @@ def _llm_synthesize(answer: str, contexts: list[dict[str, Any]], question: str) 
         "## Filtered answer (clean prose, kept sentences only):\n"
     )
     response = llm.invoke(prompt)
-    return response.content if hasattr(response, "content") else str(response)
+    return _text(response)
 
 
 # ===========================================================================
@@ -1293,12 +1293,42 @@ def _get_llm(*, temperature: float = 0):
     if base_url:
         kwargs["base_url"] = base_url
         kwargs["api_key"] = api_key
+    extra_body = _llm_extra_body()
+    if extra_body:
+        kwargs["extra_body"] = extra_body
     return ChatOpenAI(**kwargs)
 
 
+def _llm_extra_body() -> dict[str, Any]:
+    """Extra request-body fields for OpenAI-compatible servers (vLLM, llama.cpp).
+
+    DOSSIER_LLM_EXTRA_BODY  JSON object passed through verbatim.
+    DOSSIER_DISABLE_THINKING=1  adds chat_template_kwargs.enable_thinking=false
+                                (Qwen3-style thinking models).
+    """
+    body: dict[str, Any] = json.loads(os.environ.get("DOSSIER_LLM_EXTRA_BODY") or "{}")
+    if os.environ.get("DOSSIER_DISABLE_THINKING") == "1":
+        body.setdefault("chat_template_kwargs", {})["enable_thinking"] = False
+    return body
+
+
+def _strip_think(text: str) -> str:
+    """Drop a leading <think>...</think> block (thinking models). Also handles
+    servers that put the opening tag in the prompt and emit only the close."""
+    if "</think>" in text:
+        text = text.rsplit("</think>", 1)[1]
+    return text.strip()
+
+
+def _text(response: Any) -> str:
+    """Model output as plain text, minus any reasoning block."""
+    return _strip_think(response.content if hasattr(response, "content") else str(response))
+
+
 def _parse_json_block(text: str) -> dict | None:
-    """Extract a top-level JSON object from text. Tolerates code fences."""
-    cleaned = text.strip()
+    """Extract a top-level JSON object from text. Tolerates code fences and
+    a leading <think> block."""
+    cleaned = _strip_think(text)
     if cleaned.startswith("```"):
         cleaned = cleaned.split("```", 2)[1]
         if cleaned.lstrip().lower().startswith("json"):

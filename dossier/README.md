@@ -36,6 +36,53 @@ dossier chat
 dossier gardener
 ```
 
+## LLM pipeline
+
+By default the CLI is heuristic and model-free: regex extraction, token-overlap
+retrieval, and `query` prints the matching pages and facts rather than an
+answer. Set `DOSSIER_PIPELINE=llm` to run `ingest`, `query` and `gardener` on
+the benchmarked pipeline in [autoresearch/memory.py](autoresearch/memory.py)
+instead:
+
+| command    | `DOSSIER_PIPELINE=llm` behaviour |
+|------------|----------------------------------|
+| `ingest`   | LLM entity, concept and fact extraction into the same `wiki/` and `.hmlr/facts.db` |
+| `query`    | embedding + rerank retrieval, an answer from those contexts only, a grounding filter, then `Sources:` |
+| `gardener` | LLM consolidation of pages with 3+ sources, then the usual lint and index pass |
+| `doctor`   | also prints the effective model settings |
+
+```bash
+pip install -e ".[llm]"        # openai + langchain-openai; no torch
+```
+
+| variable | purpose | default |
+|----------|---------|---------|
+| `DOSSIER_PIPELINE` | `llm` turns the model-backed pipeline on | heuristic |
+| `DOSSIER_ANSWER_BASE_URL` | OpenAI-compatible chat endpoint | OpenAI |
+| `DOSSIER_ANSWER_API_KEY` | key for that endpoint (falls back to `OPENAI_API_KEY`) | |
+| `DOSSIER_BENCH_ANSWER_MODEL` | chat model name | `gpt-4o-mini` |
+| `DOSSIER_LLM_EXTRA_BODY` | JSON object sent as the request's `extra_body` | none |
+| `DOSSIER_DISABLE_THINKING` | `1` sends `chat_template_kwargs: {"enable_thinking": false}` (Qwen3-style models) | off |
+| `OPENAI_BASE_URL` / `OPENAI_API_KEY` | embeddings endpoint and key | OpenAI |
+| `DOSSIER_EMBED_MODEL` | embedding model name | `text-embedding-3-small` |
+
+A leading `<think>…</think>` block in any model reply is stripped before it is
+parsed or written to the wiki, so thinking models work with or without
+`DOSSIER_DISABLE_THINKING`.
+
+Example for local vLLM / llama.cpp servers:
+
+```bash
+export DOSSIER_PIPELINE=llm
+export DOSSIER_ANSWER_BASE_URL=http://127.0.0.1:8097/v1 DOSSIER_ANSWER_API_KEY=local
+export DOSSIER_BENCH_ANSWER_MODEL=qwen3.5-27b DOSSIER_DISABLE_THINKING=1
+export OPENAI_BASE_URL=http://127.0.0.1:8098/v1 OPENAI_API_KEY=local
+export DOSSIER_EMBED_MODEL=qwen3-embedding-8b
+```
+
+The benchmark scores in [autoresearch/RESULTS.md](autoresearch/RESULTS.md) are
+for OpenAI models; other models are untested until you re-run the bench.
+
 ## Layout
 
 See [SCHEMA.md](SCHEMA.md) for the full convention reference.

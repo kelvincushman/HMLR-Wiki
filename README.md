@@ -52,7 +52,7 @@ HMLR-WIKI/
 │   │   └── sources/
 │   ├── .hmlr/                         # engine internals (gitignored)
 │   ├── src/dossier/                   # the Python package
-│   ├── tests/                         # 40 unit tests + bench suite
+│   ├── tests/                         # 50 unit tests + bench suite
 │   │   └── bench/
 │   │       ├── test_ragas_rag.py
 │   │       └── test_hydra9_docvariant.py
@@ -75,15 +75,17 @@ git clone https://github.com/kelvincushman/HMLR-WIKI
 cd HMLR-WIKI/dossier
 
 # install
-pip install -e ".[eval]"
+pip install -e ".[eval,llm]"
 
 # credentials
 export OPENAI_API_KEY=sk-...                           # judge + embeddings
 export DOSSIER_ANSWER_API_KEY=sk-or-v1-...             # OpenRouter for answer model
 export DOSSIER_ANSWER_BASE_URL=https://openrouter.ai/api/v1
 export DOSSIER_BENCH_ANSWER_MODEL=openai/gpt-4.1-mini
+export DOSSIER_PIPELINE=llm                            # CLI uses the benchmarked pipeline
 
-# basic usage
+# basic usage (without DOSSIER_PIPELINE=llm the CLI runs the
+# heuristic, model-free path; see dossier/README.md#llm-pipeline)
 python -m dossier doctor                               # sanity check
 python -m dossier ingest raw/some_article.md           # add a source
 python -m dossier query "what do we know about X?"     # query the wiki
@@ -121,7 +123,7 @@ The pipeline above wasn't designed top-down — it was discovered through 16 lab
 
 ## Status
 
-- 40/40 unit tests pass
+- 50/50 unit tests pass
 - Hydra9 doc-variant ties HMLR on faithfulness + recall, beats on precision
 - Hard corpus composite **0.870** with the strict synthesis pipeline (current locked-in config)
 - All experiments reproducible via `pytest --run-bench`
